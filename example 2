@@ -1,33 +1,50 @@
-# example.py
+# Complex Example with Several Issues
+
 import os
+import subprocess
 
-def greet_user(name):
-    # Hardcoded credentials (security issue)
-    password = "123456"
+class FileManager:
+    def __init__(self, base_path):
+        self.base_path = base_path
 
-    if name == "":  # Code smell: Avoid checking empty strings like this
-        print("Name is empty")  # Code smell: Use logging instead of print statements
+    # Vulnerable to path traversal attacks
+    def read_file(self, filename):
+        with open(os.path.join(self.base_path, filename), 'r') as file:
+            return file.read()
+
+    # Incorrect implementation: Deletes files using shell=True, which is a security risk
+    def delete_file(self, filename):
+        subprocess.run(f"rm -rf {self.base_path}/{filename}", shell=True)
+
+    # Inefficient method: Should use caching for better performance
+    def calculate_fibonacci(self, n):
+        if n <= 0:
+            return 0
+        elif n == 1:
+            return 1
+        else:
+            return self.calculate_fibonacci(n-1) + self.calculate_fibonacci(n-2)
+
+    # Code smell: Unnecessary complex method for a simple task
+    def check_password(self, password):
+        if len(password) < 8:
+            return False
+        has_upper = any(char.isupper() for char in password)
+        has_lower = any(char.islower() for char in password)
+        has_digit = any(char.isdigit() for char in password)
+        return has_upper and has_lower and has_digit
+
+# Main execution that might not handle exceptions properly
+if __name__ == "__main__":
+    fm = FileManager('/var/www/data')
+    print(fm.read_file('config.txt'))  # Dangerous: Can expose sensitive data
+    fm.delete_file('unnecessary.log')  # Security risk: Uses shell=True in subprocess
+
+    # Logical bug: Uses an inefficient recursive method without memoization
+    print("Fibonacci of 30:", fm.calculate_fibonacci(30))
+
+    # Code smell: Complex method to validate a password
+    if fm.check_password('Password123'):
+        print("Password is secure.")
     else:
-        print("Hello, " + name)  # Vulnerability: Potential injection if 'name' comes from untrusted input
-
-def calculate_sum(a, b):
-    result = 0
-    for i in range(a, b):  # Bug: Incorrect range, excludes 'b'
-        result = result + i
-    return result
-
-def read_file(filename):
-    # Security issue: Unvalidated file path
-    with open(filename, "r") as file:
-        data = file.read()
-        print(data)
-
-def unused_function():  # Code smell: Unused function
-    pass
-
-# Main script
-print(greet_user(""))  # Bug: Function returns None and gets printed
-print(calculate_sum(1, 10))  # Logical bug: Expected 1 to 10 inclusive, but output is incorrect
-
-# Dangerous call: filename could be manipulated
-read_file("/etc/passwd")
+        print("Password is not secure.")
